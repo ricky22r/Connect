@@ -81,6 +81,65 @@ CREATE TABLE IF NOT EXISTS public.announcements (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL
 );
 
+ALTER TABLE public.user_profiles
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS expense_budget NUMERIC DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.employee_expenses (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category      TEXT NOT NULL CHECK (category IN (
+    'mobile_recharge',
+    'customer_bill_payment',
+    'amount_transfer',
+    'stationary',
+    'refreshment',
+    'others'
+  )),
+  amount        NUMERIC NOT NULL CHECK (amount > 0),
+  description   TEXT NOT NULL,
+  expense_date  DATE NOT NULL DEFAULT CURRENT_DATE,
+  status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  admin_comment TEXT,
+  approved_by   UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at   TIMESTAMP WITH TIME ZONE,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL,
+  updated_at    TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION public.enforce_employee_expense_budget()
+RETURNS TRIGGER AS $$
+DECLARE
+  budget NUMERIC;
+  used NUMERIC;
+BEGIN
+  SELECT COALESCE(expense_budget, 0) INTO budget
+  FROM public.user_profiles
+  WHERE id = NEW.employee_id AND role = 'employee';
+
+  IF budget IS NULL OR budget <= 0 THEN
+    RAISE EXCEPTION 'No expense budget allocated for this employee';
+  END IF;
+
+  SELECT COALESCE(SUM(amount), 0) INTO used
+  FROM public.employee_expenses
+  WHERE employee_id = NEW.employee_id
+    AND status != 'rejected'
+    AND id != COALESCE(NEW.id, gen_random_uuid());
+
+  IF NEW.status != 'rejected' AND used + NEW.amount > budget THEN
+    RAISE EXCEPTION 'Expense exceeds allocated budget';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_employee_expense_budget ON public.employee_expenses;
+CREATE TRIGGER trg_employee_expense_budget
+  BEFORE INSERT OR UPDATE ON public.employee_expenses
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_employee_expense_budget();
+
 
 -- ────────────────────────────────────────────────────────────────
 -- SECTION 2: ROW LEVEL SECURITY
@@ -92,6 +151,7 @@ ALTER TABLE public.call_attempts     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whatsapp_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.archived_leads    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employee_expenses ENABLE ROW LEVEL SECURITY;
 
 -- Drop all existing policies first (safe to run multiple times)
 DO $$
@@ -157,6 +217,19 @@ CREATE POLICY "p_ann_update" ON public.announcements
   FOR UPDATE USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "p_ann_delete" ON public.announcements
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- employee_expenses
+CREATE POLICY "p_employee_expenses_select" ON public.employee_expenses
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "p_employee_expenses_insert" ON public.employee_expenses
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND employee_id = auth.uid());
+
+CREATE POLICY "p_employee_expenses_update" ON public.employee_expenses
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "p_employee_expenses_delete" ON public.employee_expenses
   FOR DELETE USING (auth.uid() IS NOT NULL);
 
 -- archived_leads
