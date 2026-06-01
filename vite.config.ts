@@ -12,12 +12,40 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    define: {
+      'process.env': env,
+    },
     build: {
       outDir: 'dist',
       sourcemap: false,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+        },
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor': ['react', 'react-dom', 'react-router-dom'],
+            'ui': ['shadcn', 'lucide-react'],
+            'supabase': ['@supabase/supabase-js'],
+          },
+        },
+      },
     },
     server: {
       port: 3000,
+      host: true,
+      strictPort: false,
+      middlewareMode: false,
+      fs: {
+        strict: true,
+      },
+    },
+    preview: {
+      port: 5173,
+      host: true,
     },
   };
 });
