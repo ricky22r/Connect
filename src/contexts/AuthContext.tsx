@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchingRef.current = false;
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         setUser(session.user);
+        // Do NOT refetch profile on token refresh to prevent unnecessary reloads
       }
       // INITIAL_SESSION intentionally ignored — handled by getSession above
     });

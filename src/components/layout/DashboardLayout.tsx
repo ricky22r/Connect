@@ -64,6 +64,30 @@ const DashboardLayout: React.FC = () => {
 
   const handleSignOut = async () => { await signOut(); navigate('/login'); };
 
+  // Compute dynamic page title with accurate path matching
+  const getPageTitle = () => {
+    const currentPath = location.pathname;
+    
+    // Exact matches first (avoid Dashboard always matching)
+    for (const item of navItems) {
+      if (currentPath === item.path) {
+        return item.name;
+      }
+    }
+    
+    // Prefix matches for nested routes
+    for (const item of navItems) {
+      if (item.path !== `/${profile?.role}` && currentPath.startsWith(item.path + '/')) {
+        return item.name;
+      }
+    }
+    
+    // Fallback
+    return 'Dashboard';
+  };
+
+  const pageTitle = getPageTitle();
+
   const SidebarContent = ({ onNavClick }: { onNavClick?: () => void } = {}) => (
     <div className="flex flex-col h-full bg-slate-900 text-white">
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
@@ -148,8 +172,7 @@ const DashboardLayout: React.FC = () => {
             </Sheet>
 
             <h1 className="text-sm sm:text-lg font-bold truncate dark:text-white">
-              {navItems.find(i => location.pathname === i.path || 
-                (i.path !== '/' && location.pathname.startsWith(i.path)))?.name || 'Dashboard'}
+              {pageTitle}
             </h1>
             <span className="hidden sm:inline-flex px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] font-bold rounded uppercase shrink-0">
               Live

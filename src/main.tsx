@@ -4,8 +4,11 @@ import App from './App.tsx';
 import './index.css';
 import './dark.css';
 
-createRoot(document.getElementById('root')!).render(
+// Disable React.StrictMode in production to prevent double-mounting
+const RootComponent = process.env.NODE_ENV === 'production' ? App : (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
+
+createRoot(document.getElementById('root')!).render(RootComponent);

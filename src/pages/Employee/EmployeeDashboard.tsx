@@ -34,11 +34,13 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
-interface RecentActivity {
-  id: string;
-  message: string;
-  timestamp: Date;
-  type: 'sale_closed' | 'call_made';
+interface DashboardStats {
+  assigned: number;
+  callsMade: number;
+  interested: number;
+  completed: number;
+  callsToday: number;
+  successRate: number;
 }
 
 const EmployeeDashboard: React.FC = () => {
@@ -46,9 +48,7 @@ const EmployeeDashboard: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
-  // Performance logic
-  const [performanceStats, setPerformanceStats] = useState({
+  const [performanceStats, setPerformanceStats] = useState<DashboardStats>({
     assigned: 0,
     callsMade: 0,
     interested: 0,
@@ -56,10 +56,7 @@ const EmployeeDashboard: React.FC = () => {
     callsToday: 0,
     successRate: 0
   });
-
   const [filterTab, setFilterTab] = useState<'All' | 'Interested' | 'Complete'>('All');
-
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   // Call Modal State
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
@@ -108,16 +105,6 @@ const EmployeeDashboard: React.FC = () => {
       position: 'top-center',
       duration: 5000,
     });
-
-    setRecentActivities(prev => [
-      {
-        id: Math.random().toString(),
-        message: `Hurray!! Good News ${employeeName} Closed the Lead! - ${details}`,
-        timestamp: new Date(),
-        type: 'sale_closed'
-      },
-      ...prev
-    ].slice(0, 10)); // Keep last 10
   };
 
   const fetchCallHistory = async (leadId: string) => {
@@ -192,13 +179,6 @@ const EmployeeDashboard: React.FC = () => {
     setEditFollowUpDate(lead.follow_up_date || '');
     setEditFollowUpTime(lead.follow_up_time || '');
     setIsCallModalOpen(true);
-    // Log intent to dial immediately as a short attempt just in case they never click "Hang up"
-    setRecentActivities(prev => [{
-      id: Math.random().toString(),
-      message: `Started call with ${lead.name}`,
-      timestamp: new Date(),
-      type: 'call_made'
-    }, ...prev].slice(0,10));
     window.location.href = `tel:${lead.phone}`;
   };
 
@@ -322,13 +302,62 @@ Employee: ${profile.name}`;
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Overview</h1>
-          <p className="text-sm text-slate-500">Your performance stats and recent activities</p>
+          <p className="text-sm text-slate-500">Your performance stats and quick insights</p>
         </div>
       </div>
 
+      {/* Quick Stats Cards (replaces Recent Activity) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-blue-500">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg hidden sm:block">
+              <Star className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Today's Leads</p>
+              <p className="text-xl font-black text-slate-800">{todaysFollowUps.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-emerald-500">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hidden sm:block">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Completed</p>
+              <p className="text-xl font-black text-slate-800">{performanceStats.completed}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-amber-500">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg hidden sm:block">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pending</p>
+              <p className="text-xl font-black text-slate-800">{performanceStats.interested}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-red-500">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-red-50 text-red-600 rounded-lg hidden sm:block">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fake Calls</p>
+              <p className="text-xl font-black text-slate-800">0</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Performance Stats Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
-          {/* Performance Stats */}
+          {/* Performance Metrics */}
           <div className="grid grid-cols-2 gap-4">
             <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-slate-400">
               <CardContent className="p-4 flex items-center gap-3">
@@ -363,28 +392,6 @@ Employee: ${profile.name}`;
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-emerald-500">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hidden sm:block">
-                  <Star className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Interested</p>
-                  <p className="text-xl font-black text-slate-800">{performanceStats.interested}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-emerald-700">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hidden sm:block">
-                  <Trophy className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Completed</p>
-                  <p className="text-xl font-black text-slate-800">{performanceStats.completed}</p>
-                </div>
-              </CardContent>
-            </Card>
             <Card className="bg-white border-slate-200 shadow-sm border-b-4 border-b-indigo-500">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hidden sm:block">
@@ -397,52 +404,6 @@ Employee: ${profile.name}`;
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        <div className="space-y-6">
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full max-h-[800px]">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-blue-500" />
-                Recent Activity
-              </h3>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 uppercase text-[10px] animate-pulse">Live</Badge>
-            </div>
-            <CardContent className="p-0 overflow-y-auto w-full flex-grow">
-              {recentActivities.length === 0 ? (
-                <div className="p-8 flex flex-col items-center justify-center text-center text-slate-400">
-                  <History className="h-10 w-10 opacity-20 mb-2" />
-                  <p className="text-sm">No recent activities.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {recentActivities.map(activity => (
-                    <div key={activity.id} className="p-4 hover:bg-slate-50 transition-colors">
-                      <div className="flex gap-3">
-                        <div className={cn(
-                          "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                          activity.type === 'sale_closed' ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
-                        )}>
-                          {activity.type === 'sale_closed' ? <Trophy className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
-                        </div>
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "text-sm font-medium",
-                            activity.type === 'sale_closed' ? "text-green-700 font-bold block space-y-1" : "text-slate-700"
-                          )}>
-                            {activity.message}
-                          </p>
-                          <p className="text-xs text-slate-500 font-mono">
-                            {format(activity.timestamp, 'HH:mm:ss')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -656,7 +617,8 @@ Employee: ${profile.name}`;
               />
             </div>
 
-            <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-100 transition-all active:scale-95" onClick={handleWAShare}>
+            <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-100 transition-all"
+              onClick={handleWAShare}>
               <Share2 className="h-4 w-4" />
               Share to WhatsApp
             </Button>
@@ -674,7 +636,7 @@ Employee: ${profile.name}`;
               Today's Follow-ups
             </DialogTitle>
             <DialogDescription>
-              You have {todaysFollowUps.length} todays task your follow-up check details for More Information.
+              You have {todaysFollowUps.length} today's tasks. Review your follow-up details for more information.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto space-y-3 py-4 pr-1">

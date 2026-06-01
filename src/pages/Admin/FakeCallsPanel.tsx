@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCircle2, RefreshCcw, UserPlus, PhoneOff, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // ─── What this panel does ─────────────────────────────────────────────────────
 // This is a VALIDATION GATE — not a delete gate.
@@ -35,7 +36,7 @@ const FakeCallsPanel: React.FC = () => {
   const [assigneeId,       setAssigneeId]       = useState('');
   const [actioning,        setActioning]        = useState(false);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  // ── Fetch ───────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -151,7 +152,7 @@ const FakeCallsPanel: React.FC = () => {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       <Card>
@@ -192,99 +193,104 @@ const FakeCallsPanel: React.FC = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50 dark:bg-slate-900">
-                <TableHead>Lead</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Detected At</TableHead>
-                <TableHead className="text-right min-w-[260px]">Admin Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center text-slate-400">
-                    Scanning for suspicious activity...
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-900">
+                  <TableHead>Lead</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Detected At</TableHead>
+                  <TableHead className="text-right">Admin Action</TableHead>
                 </TableRow>
-              ) : leads.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
-                    <ShieldCheck className="h-10 w-10 text-green-400 mx-auto mb-2" />
-                    <p className="text-slate-400 font-medium">All clear — no fake calls detected</p>
-                  </TableCell>
-                </TableRow>
-              ) : leads.map(lead => (
-                <TableRow key={lead.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
-                  <TableCell className="font-semibold">{lead.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{lead.phone}</TableCell>
-                  <TableCell className="text-sm italic text-slate-600 dark:text-slate-400">
-                    {lead.assigneeName}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="destructive" className="animate-pulse font-mono">
-                      {lead.last_call_duration}s
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-400">
-                    {lead.last_call_date
-                      ? format(new Date(lead.last_call_date), 'HH:mm dd/MM/yy')
-                      : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1.5 flex-wrap">
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-16 text-center text-slate-400">
+                      Scanning for suspicious activity...
+                    </TableCell>
+                  </TableRow>
+                ) : leads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-16 text-center">
+                      <ShieldCheck className="h-10 w-10 text-green-400 mx-auto mb-2" />
+                      <p className="text-slate-400 font-medium">All clear — no fake calls detected</p>
+                    </TableCell>
+                  </TableRow>
+                ) : leads.map(lead => (
+                  <TableRow key={lead.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
+                    <TableCell className="font-semibold">{lead.name}</TableCell>
+                    <TableCell className="font-mono text-sm">{lead.phone}</TableCell>
+                    <TableCell className="text-sm italic text-slate-600 dark:text-slate-400">
+                      {lead.assigneeName}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="destructive" className="animate-pulse font-mono">
+                        {lead.last_call_duration}s
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-400">
+                      {lead.last_call_date
+                        ? format(new Date(lead.last_call_date), 'HH:mm dd/MM/yy')
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className={cn(
+                        "flex justify-end gap-1.5 flex-wrap",
+                        "md:gap-2"
+                      )}>
 
-                      {/* Action 1: Not Fake */}
-                      <Button
-                        size="sm"
-                        className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-white text-xs"
-                        disabled={actioning}
-                        onClick={() => handleNotFake(lead)}
-                        title="Mark as genuine — remove from this list"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Not Fake
-                      </Button>
+                        {/* Action 1: Not Fake */}
+                        <Button
+                          size="sm"
+                          className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+                          disabled={actioning}
+                          onClick={() => handleNotFake(lead)}
+                          title="Mark as genuine — remove from this list"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Not Fake</span>
+                        </Button>
 
-                      {/* Action 2: Recall */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
-                        disabled={actioning}
-                        onClick={() => handleRecall(lead)}
-                        title="Clear flag + mark for recall by same employee"
-                      >
-                        <RefreshCcw className="h-3.5 w-3.5" />
-                        Recall
-                      </Button>
+                        {/* Action 2: Recall */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
+                          disabled={actioning}
+                          onClick={() => handleRecall(lead)}
+                          title="Clear flag + mark for recall by same employee"
+                        >
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Recall</span>
+                        </Button>
 
-                      {/* Action 3: Reassign */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1 text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
-                        disabled={actioning}
-                        onClick={() => {
-                          setActiveLead(lead);
-                          setAssigneeId(lead.assigned_to || '');
-                          setIsReassignOpen(true);
-                        }}
-                        title="Reset to Fresh + assign to different employee"
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Reassign
-                      </Button>
+                        {/* Action 3: Reassign */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
+                          disabled={actioning}
+                          onClick={() => {
+                            setActiveLead(lead);
+                            setAssigneeId(lead.assigned_to || '');
+                            setIsReassignOpen(true);
+                          }}
+                          title="Reset to Fresh + assign to different employee"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Reassign</span>
+                        </Button>
 
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
